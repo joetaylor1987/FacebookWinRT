@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>576d88b6-8c69-4dcc-993f-280f4fbd3543</SharedGUID>
+    <ItemsProjectGuid>{e09dde25-419a-416a-9ed5-385d02891e92}</ItemsProjectGuid>
+    <ItemsRootNamespace>Facebook</ItemsRootNamespace>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml">
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <ClCompile Include="$(MSBuildThisFileDirectory)App.xaml.cpp">
+      <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)URI.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)App.xaml.h">
+      <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
+    </ClInclude>
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)URI.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+</Project>

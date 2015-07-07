@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CLCompile Include="$(MSBuildThisFileDirectory)App.xaml.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)App.xaml.h" />
+    <CLCompile Include="$(MSBuildThisFileDirectory)pch.cpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)URI.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)URI.h" />
+  </ItemGroup>
+</Project>
