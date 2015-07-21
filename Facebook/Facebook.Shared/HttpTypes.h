@@ -30,7 +30,7 @@ enum eRequestState
 	eRS_Initialised,
 	eRS_Waiting,
 	eRS_InProgress,
-	eRS_Finished,
+	eRS_Succeeded,
 	eRS_Failed
 };
 

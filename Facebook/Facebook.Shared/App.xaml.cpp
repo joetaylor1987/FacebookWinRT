@@ -7,7 +7,6 @@
 #include "MainPage.xaml.h"
 
 #include "Facebook.h"
-#include "URI.h"
 
 using namespace Facebook;
 

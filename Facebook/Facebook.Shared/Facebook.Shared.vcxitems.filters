@@ -8,7 +8,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)URI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml" />
@@ -18,6 +17,5 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)URI.h" />
   </ItemGroup>
 </Project>

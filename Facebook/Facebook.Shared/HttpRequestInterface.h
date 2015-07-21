@@ -99,6 +99,62 @@ struct IHttpCallback
 
 //! ----------------------------
 
+class HttpCallbackFunctor : public IHttpCallback
+{
+	using tFunctor = std::function <void(const SHttpRequest &)>;
+
+public:
+
+	template<class T>
+	static HttpCallbackFunctor* Create(T&& arg)
+	{
+		auto spFunctor = std::make_shared<HttpCallbackFunctor>(std::forward<T>(arg));
+		spFunctor->m_Self = spFunctor;
+		return spFunctor.get();
+	}
+
+	HttpCallbackFunctor(tFunctor functor)
+		: m_Functor(functor) {}
+
+private:
+
+	virtual void HttpComplete(const SHttpRequest &request)	override { m_Functor(request); m_Self.reset(); }
+	virtual void HttpFailed(const SHttpRequest &request)	override { m_Functor(request); m_Self.reset(); }
+
+	tFunctor m_Functor;
+	std::shared_ptr<HttpCallbackFunctor> m_Self;
+};
+
+//! ----------------------------
+
+class NKUri
+{
+public:
+
+	NKUri() = default;
+	NKUri(const std::string& uriStr);
+
+	void AppendQuery(
+		const std::string& key,
+		const std::string& value);
+
+	const std::string ToString() const;
+
+private:
+
+	using QueryContainer = std::map<std::string, std::string>;
+	std::string Protocol;
+	std::string Host;
+	std::string Port;
+	std::string Path;
+	QueryContainer Query;
+	std::string Fragment;
+
+	static NKUri Parse(const std::string& uri);
+};
+
+//! ----------------------------
+
 struct IHttpRequestManager
 {
 	virtual ~IHttpRequestManager() {}

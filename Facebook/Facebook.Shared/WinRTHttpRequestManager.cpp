@@ -133,7 +133,7 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 				for each(IKeyValuePair<String^, String^>^ pair in response->Content->Headers)
 					request->response_header[StringConvert(pair->Key)] = StringConvert(pair->Value);
 
-				request->State = response->IsSuccessStatusCode ? eRS_Finished : eRS_Failed;
+				request->State = response->IsSuccessStatusCode ? eRS_Succeeded : eRS_Failed;
 
 				returnAsync = response->Content->ReadAsBufferAsync();
 			}
