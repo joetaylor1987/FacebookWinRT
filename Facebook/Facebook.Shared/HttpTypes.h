@@ -1,23 +1,13 @@
-/*
-*  HttpTypes.h
-*  FourFourTwo
-*
-*  Created by mac on 08/12/2010.
-*  Copyright 2010 Digital Goldfish. All rights reserved.
-*
-*/
-
-#ifndef HTTP_TYPES_H_
-#define HTTP_TYPES_H_
+#pragma once
 
 struct SHttpTimeoutOptions
 {
 	SHttpTimeoutOptions()
-		: connectionTimeout(0L)
-		, maxTimeout(0L)
-		, lowSpeedLimit(0L)
-		, lowSpeedTime(0L) {}
-
+	: connectionTimeout(0L)
+	, maxTimeout(0L)
+	, lowSpeedLimit(0L)
+	, lowSpeedTime(0L) {}
+	
 	long connectionTimeout;
 	long maxTimeout;
 	long lowSpeedLimit;
@@ -51,8 +41,16 @@ enum HTTP_DATA_FORMAT
 
 enum HTTP_SAVE_TYPE
 {
-	HTTP_MEMORY,
-	HTTP_FILE,
+    HTTP_MEMORY,
+    HTTP_FILE,
 };
 
-#endif // HTTP_TYPES_H_
+enum HTTP_ERROR
+{
+	eHTTP_OK,
+	eHTTP_COULDNT_RESOLVE_PROXY,
+	eHTTP_COULDNT_RESOLVE_HOST,
+	eHTTP_COULDNT_CONNECT,
+
+	eHTTP_UNSPECIFIED,
+};

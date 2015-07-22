@@ -1,13 +1,4 @@
-/*
-*  HttpRequestInterface.h
-*
-*  Created by Joe Taylor on 29/01/2015.
-*  Copyright 2010 Ninja Kiwi. All rights reserved.
-*
-*/
-
-#ifndef _HTTPREQUEST_INTERFACE_H_
-#define _HTTPREQUEST_INTERFACE_H_
+#pragma once
 
 #include "HttpTypes.h"
 
@@ -38,10 +29,12 @@ struct IHttpRequestData_CRTP : public IHttpRequestData
 struct SHttpRequest
 {
 	friend class CCurlHttpRequestManager;
+	friend class CWinRTHttpRequestManager;
 
 public:
-
+	
 	// Request Parameters
+	std::string		 _UserAgent;  ///< User agent set by HttpRequestManager
 	std::string		CallBackKey;
 	std::string		URL;
 	HTTP_METHOD		Method;
@@ -49,14 +42,15 @@ public:
 	HTTP_SAVE_TYPE	SaveType;
 	long			TCPKeepAliveInterval;
 	SHttpTimeoutOptions TimeoutOptions;
+	bool			FailOnError;
 	class IFile		*pFile;
 
 	// State
 	uint32			ID;
 	clock_t			TimeStamp;
 	eRequestState	State;
-	int32			ErrorCode;
 	int32			HttpCode;
+	HTTP_ERROR		ErrorEnum;
 
 	// Reponse
 	std::vector<char>					downloaded_data;
@@ -65,24 +59,18 @@ public:
 public:
 
 	SHttpRequest();
-	~SHttpRequest();
-
-	SHttpRequest(const SHttpRequest& _rhs);
-	SHttpRequest& operator=	(const SHttpRequest& _rhs);
 
 	const std::string	GetDownloadedDataStr() const;
+	const std::string	GetErrorString() const;
 
-	void				SetPostData(const std::string& _string);
-	const std::string	GetPostData() const { return postData ? std::string(postData) : ""; }
-	const char*			GetPostDataRaw() const { return postData; }
+	inline void			SetData(const std::string& _string) { postData = _string; }
+	inline const std::string GetData() const { return postData; }
 
 	inline std::shared_ptr<IHttpRequestData> GetPlatformData() const { return platformData; }
 
 private:
 
-	// Request
-	char*	postData;
-	size_t	postDataLen;
+	std::string	postData;
 
 	std::shared_ptr<IHttpRequestData> platformData;
 };
@@ -157,15 +145,14 @@ private:
 
 struct IHttpRequestManager
 {
-	virtual ~IHttpRequestManager() {}
+	virtual ~IHttpRequestManager	() {}
 
-	virtual void			Process() {};
-	virtual const uint32	Send(const SHttpRequest& request,
-	struct IHttpCallback* const callback) = 0;
+	virtual void SetUserAgent		(const std::string& user_agent_str) = 0;
+	virtual void			Process	() {};
+	virtual const uint32	Send	(const SHttpRequest& request,
+									struct IHttpCallback* const callback) = 0;
 };
 
 IHttpRequestManager *CreateHttpRequestManager();
 
 //! ----------------------------
-
-#endif // _HTTPREQUEST_INTERFACE_H_

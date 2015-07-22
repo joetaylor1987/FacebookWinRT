@@ -1,12 +1,5 @@
-/*
-*  WinRTHttpRequestManager.h
-*
-*  Created by Joe Taylor on 29/01/2015.
-*  Copyright 2010 Ninja Kiwi. All rights reserved.
-*
-*/
-
 #include "pch.h"
+
 #include "WinRTHttpRequestManager.h"
 
 #include <wrl.h>
@@ -21,6 +14,7 @@ using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
 using namespace Windows::Web::Http;
 using namespace Windows::Web::Http::Filters;
+using namespace Windows::Web::Http::Headers;
 using namespace Windows::Storage::Streams;
 
 //! ----------------------------
@@ -28,6 +22,14 @@ using namespace Windows::Storage::Streams;
 IHttpRequestManager* CreateHttpRequestManager()
 {
 	return new CWinRTHttpRequestManager();
+}
+
+//! ----------------------------
+
+const std::string SHttpRequest::GetErrorString() const
+{
+	std::shared_ptr<WinRTRequestData> platformData = std::static_pointer_cast<WinRTRequestData>(GetPlatformData());
+	return StringConvert(platformData->_error_message);
 }
 
 //! ----------------------------
@@ -81,15 +83,20 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 	if (m_NextID == 0)
 		++m_NextID;
 
-	Windows::Foundation::Uri^ uri = ref new Windows::Foundation::Uri(StringConvert(_request.URL));
-	HttpMethod^ method = nullptr;
+	HttpRequestMessage^ httpMessage = nullptr;
 
-	{ 
+	{
+		HttpMethod^ method = nullptr;
+
+		std::unique_lock<std::mutex>(m_Mutex);
+
 		m_ActiveRequests.push_back(_request);
 		SHttpRequest& request = m_ActiveRequests.back();
 		request.ID = Id;
 		request.State = eRS_InProgress;
 		request.TimeStamp = clock();
+
+		request.platformData = std::make_shared<WinRTRequestData>();
 
 		switch (request.Method)
 		{
@@ -103,13 +110,104 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 			method = HttpMethod::Head;
 			break;
 		default:
-			break;
+			assert("Http Method not supported");
+			return 0;
 		}
+
+		httpMessage = ref new HttpRequestMessage(
+			method,
+			ref new Windows::Foundation::Uri(StringConvert(request.URL)));
+
+		//! Miscelaneous setup
+		//! ----------------------------
+		{
+			// FailOnError
+
+			if (m_sUserAgent != nullptr)
+			{
+				httpMessage->Headers->UserAgent->Append(ref new HttpProductInfoHeaderValue(m_sUserAgent));
+			}
+
+			//! JT: TODO
+			// AcceptEncoding("deflate")
+
+			if (request.TCPKeepAliveInterval >= 0)
+			{
+				// Enable TCP Keep Alive and set probe interval
+			}
+
+		}
+		//! ----------------------------
+
+		//! Set Timeouts
+		//! ----------------------------
+		{
+			//! JT: TODO
+
+			// request.TimeoutOptions.connectionTimeout
+			// request.TimeoutOptions.maxTimeout
+			// request.TimeoutOptions.lowSpeedLimit
+			// request.TimeoutOptions.lowSpeedTime
+		}
+		//! ----------------------------
+
+		//! Set Post Data
+		//! ----------------------------
+		{
+			if (!request.GetData().empty() && request.Method == HTTP_POST)
+			{
+				Platform::String^ contentStr = StringConvert(request.GetData());
+				HttpStringContent^ content = nullptr;
+
+				switch (request.DataFormat)
+				{
+				case HTTP_ATOM_XML:
+					content = ref new HttpStringContent(
+						contentStr,
+						UnicodeEncoding::Utf8,
+						"application/atom+xml");
+					break;
+				case HTTP_JSON:
+					content = ref new HttpStringContent(
+						contentStr,
+						UnicodeEncoding::Utf8,
+						"application/json");
+					break;
+				default:
+					content = ref new HttpStringContent(
+						contentStr,
+						UnicodeEncoding::Utf8,
+						"application/x-www-form-urlencoded");
+					break;
+
+				}
+
+				httpMessage->Content = content;
+			}
+		}
+		//! ----------------------------
+
+		//! Disable/Enable(default) body
+		//! ----------------------------
+		{
+			switch (request.Method)
+			{
+			case HTTP_HEAD:
+			{
+				//! JT: TODO (done by default?)
+				// Disable Body
+			}
+			break;
+
+			case HTTP_GET:
+			case HTTP_POST:
+			default:
+				break;
+			}
+		}
+		//! ----------------------------	
 	}
-	assert(method != nullptr && "Http Method not supported");
-
-	auto httpMessage = ref new HttpRequestMessage(method, uri);
-
+	
 	create_task(httpClient->SendRequestAsync(httpMessage))
 		.then([this, Id](task<HttpResponseMessage^> responseResult)
 	{
@@ -118,6 +216,8 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 		// the task chain to execute, so this is a nescessary evil
 		IAsyncOperationWithProgress<IBuffer^, unsigned long long>^ returnAsync =
 			create_async([](progress_reporter<unsigned long long> reporter) -> IBuffer^ { return nullptr; });
+
+		std::unique_lock<std::mutex>(m_Mutex);
 
 		if (SHttpRequest* request = GetRequest(Id))
 		{
@@ -140,6 +240,17 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 			catch (Exception^ ex)
 			{
 				request->State = eRS_Failed;
+
+				std::shared_ptr<WinRTRequestData> platformData = std::static_pointer_cast<WinRTRequestData>(request->GetPlatformData());
+				platformData->_error_code = ex->HResult;
+				platformData->_error_message = ex->Message;
+
+				// Capture specific error codes we're interested in
+				switch (platformData->_error_code)
+				{
+				case INET_E_CANNOT_CONNECT:	request->ErrorEnum = eHTTP_COULDNT_CONNECT; break;
+				default:					request->ErrorEnum = eHTTP_UNSPECIFIED; break;
+				}
 			}
 		}
 
@@ -147,6 +258,8 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 	})
 		.then([this, Id, callback](IBuffer^ responseBodyAsBuffer)
 	{
+		std::unique_lock<std::mutex>(m_Mutex);
+
 		if (SHttpRequest* request = GetRequest(Id))
 		{
 			if (request->State == eRS_Failed)
@@ -160,39 +273,39 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 				// Writing to file or memory?
 				switch (request->SaveType)
 				{
-				case HTTP_FILE:
-				{
-					/*
-					if (request->pFile)
+					case HTTP_FILE:
 					{
-						ComPtr<IInspectable> insp(reinterpret_cast<IInspectable*>(responseBodyAsBuffer));
+						/*
+						if (request->pFile)
+						{
+							ComPtr<IInspectable> insp(reinterpret_cast<IInspectable*>(responseBodyAsBuffer));
 
-						ComPtr<IBufferByteAccess> bufferByteAccess;
-						insp.As(&bufferByteAccess);
+							ComPtr<IBufferByteAccess> bufferByteAccess;
+							insp.As(&bufferByteAccess);
 
-						byte* data = nullptr;
-						bufferByteAccess->Buffer(&data);
+							byte* data = nullptr;
+							bufferByteAccess->Buffer(&data);
 
-						request->pFile->WriteBytes(data, reader->UnconsumedBufferLength);
+							request->pFile->WriteBytes(data, reader->UnconsumedBufferLength);
+						}
+						else
+						{
+							ERROR_LOG("Requested HTTP_FILE operation but no file supplied. (Callback Key: \"%s\")", request->CallBackKey.c_str());
+						}
+						*/
 					}
-					else
+					break;
+
+					case HTTP_MEMORY:
 					{
-						ERROR_LOG("Requested HTTP_FILE operation but no file supplied. (Callback Key: \"%s\")", request->CallBackKey.c_str());
+						request->downloaded_data.resize(reader->UnconsumedBufferLength);
+						reader->ReadBytes(
+							ArrayReference<unsigned char>((unsigned char*)
+								request->downloaded_data.data(),
+								request->downloaded_data.size())
+							);
 					}
-					*/
-				}
-				break;
-
-				case HTTP_MEMORY:
-				{
-					request->downloaded_data.resize(reader->UnconsumedBufferLength);
-					reader->ReadBytes(
-						ArrayReference<unsigned char>((unsigned char*)
-						request->downloaded_data.data(),
-						request->downloaded_data.size())
-						);
-				}
-				break;
+						break;
 				}
 
 				callback->HttpComplete(*request);
@@ -207,3 +320,8 @@ const uint32 CWinRTHttpRequestManager::Send(const SHttpRequest &_request, IHttpC
 }
 
 //! ----------------------------
+
+void CWinRTHttpRequestManager::SetUserAgent(const std::string& user_agent_str)
+{
+	m_sUserAgent = StringConvert(user_agent_str);
+}
