@@ -23,7 +23,44 @@ namespace PersistentData
 	void				del_access_token();
 }
 
-concurrency::task<SHttpRequest> CWinRTFacebookClient::GraphRequestAsync(const NKUri& graph_api_uri)
+namespace FBHelpers
+{
+	Error^ Error::Parse(Windows::Data::Json::JsonValue^ json_value)
+	{
+		Error^ result = ref new Error;
+
+		try
+		{
+			JsonObject^ obj = json_value->GetObject();
+
+			if (obj->HasKey("message"))
+				result->message = obj->GetNamedString("message");
+
+			if (obj->HasKey("type"))
+				result->type = obj->GetNamedString("type");
+
+			if (obj->HasKey("error_user_title"))
+				result->error_user_title = obj->GetNamedString("error_user_title");
+
+			if (obj->HasKey("error_user_msg"))
+				result->error_user_msg = obj->GetNamedString("error_user_msg");
+
+			if (obj->HasKey("code"))
+				result->code = static_cast<decltype(result->code)>(obj->GetNamedNumber("code"));
+
+			if (obj->HasKey("error_subcode"))
+				result->sub_code = static_cast<decltype(result->sub_code)>(obj->GetNamedNumber("error_subcode"));
+		}
+		catch (Exception^ e)
+		{
+
+		}
+
+		return result;
+	}
+}
+
+concurrency::task<FBHelpers::GraphResponse^> CWinRTFacebookClient::GraphRequestAsync(const NKUri& graph_api_uri)
 {
 	SHttpRequest req;
 	req.URL = graph_api_uri.ToString();
@@ -35,7 +72,45 @@ concurrency::task<SHttpRequest> CWinRTFacebookClient::GraphRequestAsync(const NK
 		callbackCompletion.set(request);
 	}));
 
-	return task<SHttpRequest>(callbackCompletion);
+	return task<SHttpRequest>(callbackCompletion)
+		.then([](SHttpRequest request)
+	{
+		FBHelpers::GraphResponse^ response = ref new FBHelpers::GraphResponse;
+
+		if (request.State == eRS_Succeeded)
+		{
+			try
+			{
+				std::string responseStr = request.GetDownloadedDataStr();
+				JsonValue^ response_json = JsonValue::Parse(StringConvert(responseStr));
+				
+				if (response_json->GetObject()->HasKey("error"))
+				{
+					response->error = FBHelpers::Error::Parse(
+						response_json->GetObject()->GetNamedValue("error"));
+				}
+				else
+				{
+					response->result = response_json;
+				}
+			}
+			catch (Exception^ e)
+			{
+				response->error = ref new FBHelpers::Error;
+				response->error->type = "Parse";
+				response->error->message = e->Message;
+			}
+		}
+		else
+		{
+			response->error = ref new FBHelpers::Error;
+			response->error->type = "Http";
+			response->error->code = request.HttpCode;
+			response->error->message = StringConvert(request.GetErrorString());
+		}
+
+		return response;
+	});;
 }
 
 //! ----------------------------
@@ -183,15 +258,17 @@ task<bool> CWinRTFacebookClient::refresh_permissions()
 	NKUri uri("https://graph.facebook.com/me/permissions");
 	uri.AppendQuery("access_token", PersistentData::get_access_token());
 	
-	return GraphRequestAsync(uri).then([](const SHttpRequest& result)
+	return GraphRequestAsync(uri).then([](FBHelpers::GraphResponse^ response)
 	{
-		if (result.State == eRS_Succeeded)
+		if (response->error)
+		{
+
+		}
+		else
 		{
 			try
 			{
-				std::string responseStr = result.GetDownloadedDataStr();
-				JsonValue^ response_json = JsonValue::Parse(StringConvert(responseStr));
-				JsonArray^ values = response_json->GetObject()->GetNamedArray("data");
+				JsonArray^ values = response->result->GetObject()->GetNamedArray("data");
 
 				for (unsigned int i = 0; i < values->Size; i++)
 				{
@@ -205,7 +282,7 @@ task<bool> CWinRTFacebookClient::refresh_permissions()
 			catch (Exception^ e)
 			{
 				OutputDebugString(e->Message->Data());
-			}			
+			}
 		}
 
 		return false;
