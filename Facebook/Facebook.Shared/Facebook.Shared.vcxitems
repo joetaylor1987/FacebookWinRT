@@ -21,6 +21,7 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)App.xaml.h">
       <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
@@ -32,6 +33,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h" />
   </ItemGroup>
   <ItemGroup>

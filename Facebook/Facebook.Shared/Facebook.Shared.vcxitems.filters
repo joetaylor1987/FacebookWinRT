@@ -5,17 +5,45 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)App.xaml.h" />
     <CLCompile Include="$(MSBuildThisFileDirectory)pch.cpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp">
+      <Filter>HttpClient</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp">
+      <Filter>HttpClient</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp">
+      <Filter>FacebookClient</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp">
+      <Filter>FacebookClient</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h">
+      <Filter>HttpClient</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h">
+      <Filter>HttpClient</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h">
+      <Filter>HttpClient</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h">
+      <Filter>FacebookClient</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.h">
+      <Filter>FacebookClient</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="HttpClient">
+      <UniqueIdentifier>{24058ae0-3f27-4dda-a4d0-820866a351c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="FacebookClient">
+      <UniqueIdentifier>{5f47b8c9-c577-4e39-9ac9-ef18f302d633}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
