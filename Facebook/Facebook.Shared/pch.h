@@ -7,31 +7,18 @@
 
 #include <collection.h>
 #include <ppltasks.h>
-#include <boost/nowide/convert.hpp>
+#include <locale>
+#include <codecvt>
 
 #include "App.xaml.h"
 
 inline const std::string StringConvert(Platform::String^ _str)
 {
-	try
-	{
-		return boost::nowide::narrow(_str->Data());
-	}
-	catch (...)
-	{
-		return "";
-	}
+	return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().to_bytes(_str->Data());
 }
 
 inline Platform::String^ StringConvert(const std::string& _str)
 {
-	try
-	{
-		std::wstring _wstr = boost::nowide::widen(_str);
-		return ref new Platform::String(_wstr.c_str());
-	}
-	catch (...)
-	{
-		return "";
-	}
+	 std::wstring _wstr = std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().from_bytes(_str);
+	 return ref new Platform::String(_wstr.c_str());
 }
