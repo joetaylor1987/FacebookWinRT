@@ -62,55 +62,92 @@ namespace FBHelpers
 
 concurrency::task<FBHelpers::GraphResponse^> CWinRTFacebookClient::GraphRequestAsync(const NKUri& graph_api_uri)
 {
-	SHttpRequest req;
-	req.URL = graph_api_uri.ToString();
-	req.DataFormat = HTTP_JSON;
-	req.Method = HTTP_GET;
-
-	task_completion_event<SHttpRequest> callbackCompletion;
-	m_HttpRequestManager->Send(req, HttpCallbackFunctor::Create([=](const SHttpRequest &request) {
-		callbackCompletion.set(request);
-	}));
-
-	return task<SHttpRequest>(callbackCompletion)
-		.then([](SHttpRequest request)
+	return create_task([=]()
 	{
 		FBHelpers::GraphResponse^ response = ref new FBHelpers::GraphResponse;
 
-		if (request.State == eRS_Succeeded)
+		std::string api_uri = graph_api_uri.ToString();
+		bool is_paging = false;
+
+		do
 		{
-			try
+			SHttpRequest req;
+			req.URL = api_uri;
+			req.DataFormat = HTTP_JSON;
+			req.Method = HTTP_GET;
+
+			task_completion_event<SHttpRequest> callbackCompletion;
+			m_HttpRequestManager->Send(req, HttpCallbackFunctor::Create([=](const SHttpRequest &request) {
+				callbackCompletion.set(request);
+			}));
+
+			auto graph_request = task<SHttpRequest>(callbackCompletion)
+				.then([&](SHttpRequest request)
 			{
-				std::string responseStr = request.GetDownloadedDataStr();
-				JsonValue^ response_json = JsonValue::Parse(StringConvert(responseStr));
-				
-				if (response_json->GetObject()->HasKey("error"))
+				if (request.State == eRS_Succeeded)
 				{
-					response->error = FBHelpers::Error::Parse(
-						response_json->GetObject()->GetNamedValue("error"));
+					try
+					{
+						std::string responseStr = request.GetDownloadedDataStr();
+						JsonValue^ response_json = JsonValue::Parse(StringConvert(responseStr));
+
+						if (response_json->GetObject()->HasKey("error"))
+						{
+							response->error = FBHelpers::Error::Parse(
+								response_json->GetObject()->GetNamedValue("error"));
+
+							is_paging = false;
+						}
+						else
+						{
+							if (response_json->GetObject()->HasKey("paging"))
+							{
+								// Extract data
+
+								auto paging_ojbect = response_json->GetObject()->GetNamedObject("paging");
+
+								if (paging_ojbect->HasKey("next"))
+								{
+									is_paging = true;
+									api_uri = StringConvert(paging_ojbect->GetNamedString("next"));
+								}
+								else
+								{
+									is_paging = false;
+								}
+							}
+							else
+							{
+								response->result = response_json;
+							}
+						}
+					}
+					catch (Exception^ e)
+					{
+						response->error = ref new FBHelpers::Error;
+						response->error->type = "Parse";
+						response->error->message = e->Message;
+
+						is_paging = false;
+					}
 				}
 				else
 				{
-					response->result = response_json;
+					response->error = ref new FBHelpers::Error;
+					response->error->type = "Http";
+					response->error->code = request.HttpCode;
+					response->error->message = StringConvert(request.GetErrorString());
+
+					is_paging = false;
 				}
-			}
-			catch (Exception^ e)
-			{
-				response->error = ref new FBHelpers::Error;
-				response->error->type = "Parse";
-				response->error->message = e->Message;
-			}
-		}
-		else
-		{
-			response->error = ref new FBHelpers::Error;
-			response->error->type = "Http";
-			response->error->code = request.HttpCode;
-			response->error->message = StringConvert(request.GetErrorString());
-		}
+			});
+
+			graph_request.wait();
+
+		} while (is_paging);
 
 		return response;
-	});;
+	});	
 }
 
 //! ----------------------------
@@ -255,7 +292,7 @@ task<bool> CWinRTFacebookClient::full_login(std::string scopes)
 
 task<bool> CWinRTFacebookClient::refresh_permissions()
 {
-	NKUri uri("https://graph.facebook.com/me/permissions");
+	NKUri uri("https://graph.facebook.com/me/likes");
 	uri.AppendQuery("access_token", PersistentData::get_access_token());
 	
 	return GraphRequestAsync(uri).then([](FBHelpers::GraphResponse^ response)
@@ -273,8 +310,6 @@ task<bool> CWinRTFacebookClient::refresh_permissions()
 				for (unsigned int i = 0; i < values->Size; i++)
 				{
 					JsonObject^ permission = values->GetObjectAt(i);
-					String^ permission_name = permission->GetNamedString("permission");
-					String^ permission_status = permission->GetNamedString("status");
 				}
 
 				return true;
