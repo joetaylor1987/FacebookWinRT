@@ -7,6 +7,7 @@
 #include "MainPage.xaml.h"
 
 #include "Facebook.h"
+#include "WinRTFacebookHelpers.h"
 
 using namespace Facebook;
 
@@ -51,26 +52,7 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 		DebugSettings->EnableFrameRateCounter = true;
 	}
 #endif
-	/*
-	std::vector<std::string> tests;
-
-	tests.emplace_back("http://blogs.msdn.com/b/wsdevsol/archive/2015/02/12/integrating-facebook-authentication-in-universal-windows-apps.aspx");
-	tests.emplace_back("http://forums.overclockers.co.uk/forumdisplay.php?f=12");
-	tests.emplace_back("https://mail.google.com/mail/u/0/#inbox");
-	tests.emplace_back("www.facebook.com");
-
-	for (const auto& uriStr : tests)
-	{
-		NKUri uri = NKUri(uriStr);
-		std::string res = uri.ToString();
-
-		assert(res == uriStr);
-	}
-	*/
 	
-//	CWinRTFacebookClient::instance().logout(true);
-	CWinRTFacebookClient::instance().login("email", true);
-
 	auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
 
 	// Do not repeat app initialization when the Window already has content,
@@ -122,6 +104,17 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 
 	// Ensure the current window is active
 	Window::Current->Activate();
+	
+	FBHelpers::s_HttpRequestManager = std::shared_ptr<IHttpRequestManager>(CreateHttpRequestManager());
+
+	CWinRTFacebookClient::instance().SetDispatcher(Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher);
+//	CWinRTFacebookClient::instance().logout(true);
+	CWinRTFacebookClient::instance().login("email,user_likes", true)
+		.then([](bool logged_in)
+	{
+		bool success = logged_in;
+	});
+
 }
 
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP

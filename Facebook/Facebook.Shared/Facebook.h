@@ -6,20 +6,28 @@ public:
 
 	static CWinRTFacebookClient& instance();
 
-	void login	(std::string scopes, bool allow_ui);
-	void logout	(bool clearAccessToken = true);
+	inline void SetDispatcher(Windows::UI::Core::CoreDispatcher^ dispatcher)
+	{
+		m_Dispatcher = dispatcher;
+	}
+
+	concurrency::task<bool> login(
+		std::string scopes,
+		bool allow_ui = true);
+
+	void logout(
+		bool clearAccessToken = true);
 	
 private:
 
-	CWinRTFacebookClient();
+	concurrency::task<bool>
+		full_login(const std::string& scopes);
 
 	concurrency::task<bool>	
-		full_login(std::string scopes);
-
-	concurrency::task<bool>	
-		refresh_permissions();	
+		get_permissions();
 
 private:
 
-	bool	m_bIsSingedIn;
+	bool m_bIsSingedIn = false;
+	Windows::UI::Core::CoreDispatcher^ m_Dispatcher;
 };

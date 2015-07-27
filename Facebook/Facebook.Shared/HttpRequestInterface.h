@@ -6,6 +6,8 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <sstream>
+#include <type_traits>
 
 //! ----------------------------
 
@@ -115,30 +117,142 @@ private:
 
 //! ----------------------------
 
+template<class StringType = std::string>
 class NKUri
 {
 public:
 
 	NKUri() = default;
-	NKUri(const std::string& uriStr);
+	NKUri(const StringType& uriStr)
+	{
+		*this = NKUri::Parse(uriStr);
+	}
 
 	void AppendQuery(
-		const std::string& key,
-		const std::string& value);
+		const StringType& key,
+		const StringType& value)
+	{
+		Query.insert(std::make_pair(key, value));
+	}
 
-	const std::string ToString() const;
+	const StringType ToString() const
+	{
+		using StreamType = typename std::conditional<std::is_same<StringType, std::string>::value,
+			std::stringstream,
+			std::wstringstream>::type;
+
+		StreamType ss;
+
+		if (!Protocol.empty())
+			ss << Protocol << "://";
+
+		if (!Host.empty())
+			ss << Host;
+
+		if (!Port.empty())
+			ss << ":" << Port;
+
+		if (!Path.empty())
+			ss << Path;
+
+		for (QueryContainer::const_iterator it = Query.begin(); it != Query.end(); ++it)
+			ss << (it == Query.begin() ? "?" : "&") << it->first << "=" << it->second;
+
+		if (!Fragment.empty())
+			ss << "#" << Fragment;
+
+		return ss.str();
+	}
 
 private:
 
-	using QueryContainer = std::map<std::string, std::string>;
-	std::string Protocol;
-	std::string Host;
-	std::string Port;
-	std::string Path;
+	using QueryContainer = std::map<StringType, StringType>;
+	StringType Protocol;
+	StringType Host;
+	StringType Port;
+	StringType Path;
 	QueryContainer Query;
-	std::string Fragment;
+	StringType Fragment;
 
-	static NKUri Parse(const std::string& uri);
+	static NKUri Parse(const StringType& uri)
+	{
+		NKUri result;
+
+		if (uri.length() == 0)
+			return result;
+
+		//! Protocol
+		//! ----------------------------
+		StringType::const_iterator protocolEnd = std::find(uri.begin(), uri.end(), ':');
+		if (protocolEnd != uri.end())
+		{
+			StringType prot = &*(protocolEnd);
+			if ((prot.length() > 3) && (prot[1] == '/'))
+			{
+				result.Protocol = StringType(uri.begin(), protocolEnd);
+				protocolEnd += 3;
+			}
+		}
+
+		//	"Protocol:://host:port/path?query#fragment
+
+		//! Host
+		//! ----------------------------
+		StringType::const_iterator hostStart = result.Protocol.empty() ? uri.begin() : protocolEnd;
+		StringType::const_iterator fragmentStart = std::find(uri.begin(), uri.end(), '#');
+		StringType::const_iterator queryStart = std::find(uri.begin(), fragmentStart, '?');
+		StringType::const_iterator pathStart = std::find(hostStart, queryStart, '/');
+		StringType::const_iterator hostEnd = std::find(hostStart, (pathStart != uri.end()) ? pathStart : queryStart, ':');
+
+		result.Host = StringType(hostStart, hostEnd);
+
+		//! Port
+		//! ----------------------------
+		if ((hostEnd != uri.end()) && *hostEnd == ':')
+		{
+			hostEnd++;
+			StringType::const_iterator portEnd = (pathStart != uri.end()) ? pathStart : queryStart;
+			result.Port = StringType(hostEnd, portEnd);
+		}
+
+		//! Path
+		//! ----------------------------
+		if (pathStart != uri.end())
+			result.Path = StringType(pathStart, queryStart);
+
+		//! Query
+		//! ----------------------------
+		if (queryStart != fragmentStart)
+		{
+			queryStart += 1;
+
+			StringType key;
+			StringType::const_iterator it = queryStart;
+			for (; it != fragmentStart; ++it)
+			{
+				if (*it == '=')
+				{
+					key = StringType(queryStart, it);
+					queryStart = it + 1;
+				}
+
+				if (*it == '&')
+				{
+					result.Query[key] = StringType(queryStart, it);
+					queryStart = it + 1;
+				}
+			}
+
+			result.Query[key] = StringType(queryStart, it);
+		}
+
+		//! Fragment
+		//! ----------------------------
+		if (fragmentStart != uri.end())
+			result.Fragment = StringType(fragmentStart + 1, uri.end());
+
+		return result;
+	}
 };
 
 //! ----------------------------
