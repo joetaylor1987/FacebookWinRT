@@ -11,73 +11,85 @@ using namespace Windows::Data::Json;
 using namespace Windows::UI::Core;
 using namespace FBHelpers;
 
-const std::wstring fb_app_id = L"710421129063177";
-
 //! ----------------------------
 
-CWinRTFacebookClient& CWinRTFacebookClient::instance()
+void CWinRTFacebookClient::initialise(const std::wstring& app_id, Windows::UI::Core::CoreDispatcher^ ui_thread_dispatcher)
 {
-	static CWinRTFacebookClient c;
-	return c;
+	// We must have a dispatcher for the UI thread
+	assert(ui_thread_dispatcher);
+
+	m_AppId = ref new String(app_id.c_str());
+	m_Dispatcher = ui_thread_dispatcher;
 }
 
 //! ----------------------------
 
-task<bool> CWinRTFacebookClient::login(std::string scopes, bool allow_ui /*= true*/)
+task<bool> CWinRTFacebookClient::login(const std::string& scopes, eLoginConfig config /*= eLoginConfig::ALLOW_UI*/)
 {
 	return create_task([=]()
 	{
-		return PersistentData::has_access_token() || (allow_ui && full_login(scopes).get());
+		// If no access token stored, attempt full sign-in (only when ui allowed)
+		return PersistentData::has_access_token() || (config == eLoginConfig::ALLOW_UI && full_login(scopes).get());
 	})
 		.then([=](bool has_access_token)
 	{
+		// Have access token? Try and get permissions with it
 		return has_access_token && get_permissions().get();
 	})
 		.then([=](bool session_is_valid)
 	{
+		// If permission get failed. Logout
 		if (!session_is_valid)
 			logout();
 
+		// Signed in if session is valid
 		m_bIsSingedIn = session_is_valid;
 
+		// Finally, return success or failure
 		return session_is_valid;
 	});
 }
 
-void CWinRTFacebookClient::logout(bool clearAccessToken /*= true*/)
+//! ----------------------------
+
+void CWinRTFacebookClient::logout(eLogoutConfig config /*= CLEAR_STATE*/)
 {
 	m_bIsSingedIn = false;
 
-	if (clearAccessToken)
+	if (config == eLogoutConfig::CLEAR_STATE)
 	{
 		if (PersistentData::has_access_token())
 			PersistentData::del_access_token();
+
+		//! TODO: Clear permissions
 	}
 }
+
+//! ----------------------------
 
 task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 {
 	assert(m_Dispatcher);
 
+	// Construct facebook oauth URI
 	NKUri<std::wstring> login_uri(L"https://www.facebook.com/dialog/oauth");
 
-	login_uri.AppendQuery( L"client_id", fb_app_id );
+	login_uri.AppendQuery( L"client_id", m_AppId->Data() );
 	login_uri.AppendQuery( L"redirect_uri", L"https://www.facebook.com/connect/login_success.html" );
 	login_uri.AppendQuery( L"scope", widen(scopes));
 	login_uri.AppendQuery( L"display", L"popup" );
 	login_uri.AppendQuery( L"response_type", L"token" );
 
-	String^ wStrUri = ref new String(login_uri.ToString().c_str());	
+	String^ wStrUri = ref new String(login_uri.ToString().c_str());
 
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 	WebAuthenticationBroker::AuthenticateAndContinue(
 		ref new Uri(wStrUri),
 		WebAuthenticationBroker::GetCurrentApplicationCallbackUri());
 
-	return create_task([](){ return false; });
+	//! TODO: Catch App's 'Continue' event, and set m_AuthenticateCompletion
 #else
 
-	task_completion_event<bool> callbackCompletion;
 	create_task(m_Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
 		ref new DispatchedHandler([=]()
 	{
@@ -91,8 +103,8 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 
 			if (result->ResponseStatus == WebAuthenticationStatus::Success)
 			{
+				// Parse response for the access token
 				std::wstring wstr_response(result->ResponseData->Data());
-			
 				std::wstring find_str = L"access_token=";
 				auto start = wstr_response.find(find_str);
 				if (start != std::wstring::npos)
@@ -103,43 +115,47 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 			}
 			else
 			{
-				unsigned int responseCode = result->ResponseErrorDetail;
 				// something went wrong.
+				unsigned int responseCode = result->ResponseErrorDetail;
 			}
 
+			// Return access token (can be null if auth failed)
 			return short_term_access_token;
 		})
 			.then([](String^ short_term_access_token)
 		{
-			// TODO: Replace me with request for long-term access token
+			//! TODO: Replace me with request for long-term access token
 			return create_task([=]() { return short_term_access_token; });
 		})
 			.then([=](String^ long_term_access_token)
 		{
+			// If we have a long-term access token, store it.
 			if (long_term_access_token)
 				PersistentData::set_access_token(long_term_access_token);
 
-			callbackCompletion.set(long_term_access_token != nullptr);
+			// Set our completion handler adn we're done.
+			m_AuthenticateCompletion.set(long_term_access_token != nullptr);
 		});
 	})));
 
-	return task<bool>(callbackCompletion);
-	/*
-	
-	*/
 #endif
+
+	// Wait for completion handler to be set
+	return task<bool>(m_AuthenticateCompletion);
 }
 
+//! ----------------------------
+
 task<bool> CWinRTFacebookClient::get_permissions()
-{	
+{
+	//! TODO: Clear permissions first.
+
 	return GraphRequestAsync(NKUri<std::wstring>(L"https://graph.facebook.com/me/permissions"))
 		.then([](GraphResponse^ response)
 	{
-		if (response->error)
-		{
+		bool bSuccess = false;
 
-		}
-		else
+		if (!response->error)
 		{
 			try
 			{
@@ -148,20 +164,27 @@ task<bool> CWinRTFacebookClient::get_permissions()
 				for (unsigned int i = 0; i < values->Size; i++)
 				{
 					JsonObject^ permission = values->GetObjectAt(i);
-					String^ name = permission->GetNamedString("permission");
 
-					OutputDebugString(name->Data());
-					OutputDebugString(L"\n");
+					String^ name = permission->GetNamedString("permission");
+					String^ state = permission->GetNamedString("status");
+
+					if (String::CompareOrdinal(state, "granted") == 0)
+					{
+						//! TODO: Store permission: name
+						std::wstring wstr_name = name->Data();
+					}
 				}
 
-				return true;
+				bSuccess = true;
 			}
 			catch (Exception^ e)
 			{
-				OutputDebugString(e->Message->Data());
+
 			}
 		}
 
-		return false;
+		return bSuccess;
 	});
 }
+
+//! ----------------------------

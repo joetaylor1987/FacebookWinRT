@@ -8,6 +8,28 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+            <ColumnDefinition Width="18*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="14*"/>
+            <RowDefinition Height="4*"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
 
+        <ItemsControl Grid.Column="1" Grid.Row="1">
+            <Button x:Name="FBLogout" Content="Logout" HorizontalAlignment="Stretch" Margin="0" VerticalAlignment="Top" Click="FBLogout_Click"/>
+            <Button x:Name="FBLogin" Content="Login" HorizontalAlignment="Stretch" Margin="0" VerticalAlignment="Top" Click="FBLogin_Click"/>
+        </ItemsControl>
+
+        <Border Grid.Column="1" Grid.Row="2" Margin="0" CornerRadius="5" BorderThickness="2" BorderBrush="White">
+            <ScrollViewer HorizontalScrollMode="Disabled">
+                <TextBlock x:Name="Output" Text="Test"/>
+            </ScrollViewer>
+        </Border>
     </Grid>
+    
 </Page>

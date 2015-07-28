@@ -6,6 +6,9 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
+#include "Facebook.h"
+#include "WinRTFacebookHelpers.h"
+
 using namespace Facebook;
 
 using namespace Platform;
@@ -24,4 +27,26 @@ using namespace Windows::UI::Xaml::Navigation;
 MainPage::MainPage()
 {
 	InitializeComponent();
+
+	FBHelpers::s_HttpRequestManager = std::shared_ptr<IHttpRequestManager>(CreateHttpRequestManager());
+
+	CWinRTFacebookClient::instance().initialise(
+		L"710421129063177",
+		Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher);
+}
+
+
+void Facebook::MainPage::FBLogout_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+	CWinRTFacebookClient::instance().logout();
+}
+
+
+void Facebook::MainPage::FBLogin_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+	CWinRTFacebookClient::instance().login("email,user_likes")
+		.then([](bool logged_in)
+	{
+		bool success = logged_in;
+	});
 }

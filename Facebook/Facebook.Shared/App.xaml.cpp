@@ -6,9 +6,6 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
-#include "Facebook.h"
-#include "WinRTFacebookHelpers.h"
-
 using namespace Facebook;
 
 using namespace Platform;
@@ -45,14 +42,7 @@ App::App()
 /// </summary>
 /// <param name="e">Details about the launch request and process.</param>
 void App::OnLaunched(LaunchActivatedEventArgs^ e)
-{
-#if _DEBUG
-	if (IsDebuggerPresent())
-	{
-		DebugSettings->EnableFrameRateCounter = true;
-	}
-#endif
-	
+{		
 	auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
 
 	// Do not repeat app initialization when the Window already has content,
@@ -104,17 +94,6 @@ void App::OnLaunched(LaunchActivatedEventArgs^ e)
 
 	// Ensure the current window is active
 	Window::Current->Activate();
-	
-	FBHelpers::s_HttpRequestManager = std::shared_ptr<IHttpRequestManager>(CreateHttpRequestManager());
-
-	CWinRTFacebookClient::instance().SetDispatcher(Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher);
-//	CWinRTFacebookClient::instance().logout(true);
-	CWinRTFacebookClient::instance().login("email,user_likes", true)
-		.then([](bool logged_in)
-	{
-		bool success = logged_in;
-	});
-
 }
 
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP

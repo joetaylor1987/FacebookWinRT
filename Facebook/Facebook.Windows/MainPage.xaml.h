@@ -17,5 +17,8 @@ namespace Facebook
 	public:
 		MainPage();
 
+	private:
+		void FBLogout_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
+		void FBLogin_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 	};
 }
