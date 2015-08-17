@@ -47,6 +47,6 @@ void Facebook::MainPage::FBLogin_Click(Platform::Object^ sender, Windows::UI::Xa
 	CWinRTFacebookClient::instance().login("email,user_likes")
 		.then([](bool logged_in)
 	{
-		bool success = logged_in;
+		logged_in;
 	});
 }

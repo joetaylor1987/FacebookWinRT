@@ -126,7 +126,7 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 			else
 			{
 				// something went wrong.
-				unsigned int responseCode = result->ResponseErrorDetail;
+//				unsigned int responseCode = result->ResponseErrorDetail;
 			}
 
 			// Return access token (can be null if auth failed)

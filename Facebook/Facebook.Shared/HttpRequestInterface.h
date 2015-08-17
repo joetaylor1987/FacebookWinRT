@@ -83,8 +83,8 @@ struct IHttpCallback
 {
 	virtual ~IHttpCallback() {}
 
-	virtual void HttpComplete(const SHttpRequest &request)	{}
-	virtual void HttpFailed(const SHttpRequest &request)	{}
+	virtual void HttpComplete(const SHttpRequest&)	{}
+	virtual void HttpFailed(const SHttpRequest&)	{}
 };
 
 //! ----------------------------
