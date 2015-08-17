@@ -26,15 +26,25 @@ void CWinRTFacebookClient::initialise(const std::wstring& app_id, Windows::UI::C
 
 task<bool> CWinRTFacebookClient::login(const std::string& scopes, eLoginConfig config /*= eLoginConfig::ALLOW_UI*/)
 {
-	return create_task([=]()
+	return concurrency::create_task([=]()
 	{
-		// If no access token stored, attempt full sign-in (only when ui allowed)
-		return PersistentData::has_access_token() || (config == eLoginConfig::ALLOW_UI && full_login(scopes).get());
-	})
-		.then([=](bool has_access_token)
-	{
-		// Have access token? Try and get permissions with it
-		return has_access_token && get_permissions().get();
+		bool session_is_valid = false;
+
+		// We've already got an access token
+		if (PersistentData::has_access_token())
+		{
+			// Check it's still valid by refreshing permissions
+			session_is_valid = get_permissions().get();
+		}
+
+		// If the above failed and we're allowing UI, proceed with full login,
+		// followed by another token refresh attempt
+		if (!session_is_valid && config == eLoginConfig::ALLOW_UI)
+		{
+			session_is_valid = full_login(scopes).get() && get_permissions().get();
+		}
+		
+		return session_is_valid;
 	})
 		.then([=](bool session_is_valid)
 	{
@@ -90,10 +100,10 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 	//! TODO: Catch App's 'Continue' event, and set m_AuthenticateCompletion
 #else
 
-	create_task(m_Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
+	concurrency::create_task(m_Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
 		ref new DispatchedHandler([=]()
 	{
-		create_task(WebAuthenticationBroker::AuthenticateAsync(
+		concurrency::create_task(WebAuthenticationBroker::AuthenticateAsync(
 		WebAuthenticationOptions::None,
 		ref new Uri(wStrUri),
 		ref new Uri("https://www.facebook.com/connect/login_success.html")))
@@ -125,7 +135,7 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 			.then([](String^ short_term_access_token)
 		{
 			//! TODO: Replace me with request for long-term access token
-			return create_task([=]() { return short_term_access_token; });
+			return concurrency::create_task([=]() { return short_term_access_token; });
 		})
 			.then([=](String^ long_term_access_token)
 		{
