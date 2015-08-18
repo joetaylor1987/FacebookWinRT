@@ -11,6 +11,7 @@
 
 using namespace Facebook;
 
+using namespace concurrency;
 using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Collections;
@@ -39,14 +40,27 @@ MainPage::MainPage()
 void Facebook::MainPage::FBLogout_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
 	CWinRTFacebookClient::instance().logout();
+
+	this->Output->Text += "Logged Out\n";
 }
 
 
 void Facebook::MainPage::FBLogin_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
+	this->ProgressBar->Visibility = ::Visibility::Visible;
+
 	CWinRTFacebookClient::instance().login("email,user_likes")
-		.then([](bool logged_in)
+		.then([=](bool logged_in)
 	{
-		logged_in;
-	});
+		this->ProgressBar->Visibility = ::Visibility::Collapsed;
+
+		if (logged_in)
+		{
+			this->Output->Text += "Login Successful!\n";
+		}
+		else
+		{
+			this->Output->Text += "Login Failed!\n";
+		}
+	}, task_continuation_context::use_current());
 }

@@ -5,7 +5,7 @@
     xmlns:local="using:Facebook"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    mc:Ignorable="d" RequestedTheme="Light">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.ColumnDefinitions>
@@ -23,11 +23,12 @@
         <ItemsControl Grid.Column="1" Grid.Row="1">
             <Button x:Name="FBLogout" Content="Logout" HorizontalAlignment="Stretch" Margin="0" VerticalAlignment="Top" Click="FBLogout_Click"/>
             <Button x:Name="FBLogin" Content="Login" HorizontalAlignment="Stretch" Margin="0" VerticalAlignment="Top" Click="FBLogin_Click"/>
+            <ProgressBar x:Name="ProgressBar" HorizontalAlignment="Left" Height="10" Width="1229" Visibility="Collapsed" IsIndeterminate="True" />
         </ItemsControl>
 
-        <Border Grid.Column="1" Grid.Row="2" Margin="0" CornerRadius="5" BorderThickness="2" BorderBrush="White">
+        <Border Grid.Column="1" Grid.Row="2" Margin="0" CornerRadius="5" BorderThickness="2" BorderBrush="Gray">
             <ScrollViewer HorizontalScrollMode="Disabled">
-                <TextBlock x:Name="Output" Text="Test"/>
+                <TextBlock x:Name="Output" />
             </ScrollViewer>
         </Border>
     </Grid>

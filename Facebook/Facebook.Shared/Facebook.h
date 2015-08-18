@@ -40,6 +40,8 @@ public:
 
 	void logout(
 		eLogoutConfig config = eLogoutConfig::CLEAR_STATE);
+
+	inline const bool IsSignedIn() const { return m_bIsSingedIn; }
 	
 private:
 

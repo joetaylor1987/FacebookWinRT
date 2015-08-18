@@ -28,6 +28,9 @@ task<bool> CWinRTFacebookClient::login(const std::string& scopes, eLoginConfig c
 {
 	return concurrency::create_task([=]()
 	{
+		if (m_bIsSingedIn)
+			return true;
+
 		bool session_is_valid = false;
 
 		// We've already got an access token
@@ -41,7 +44,16 @@ task<bool> CWinRTFacebookClient::login(const std::string& scopes, eLoginConfig c
 		// followed by another token refresh attempt
 		if (!session_is_valid && config == eLoginConfig::ALLOW_UI)
 		{
-			session_is_valid = full_login(scopes).get() && get_permissions().get();
+			auto full_login_flow = concurrency::create_task(full_login(scopes))
+				.then([=](bool success)
+			{
+				if (success)
+					return get_permissions().get();
+
+				return false;
+			});
+
+			session_is_valid = full_login_flow.get();
 		}
 		
 		return session_is_valid;
@@ -109,7 +121,7 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 		ref new Uri("https://www.facebook.com/connect/login_success.html")))
 			.then([=](WebAuthenticationResult^ result)
 		{
-			String^ short_term_access_token;
+			String^ short_term_access_token = nullptr;
 
 			if (result->ResponseStatus == WebAuthenticationStatus::Success)
 			{
