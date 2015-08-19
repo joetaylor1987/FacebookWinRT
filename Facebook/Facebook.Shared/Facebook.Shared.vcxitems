@@ -19,7 +19,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)App.xaml.cpp">
       <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp" />
@@ -29,7 +29,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />

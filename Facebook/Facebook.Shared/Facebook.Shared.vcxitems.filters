@@ -11,10 +11,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.cpp">
       <Filter>HttpClient</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Facebook.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp">
       <Filter>FacebookClient</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.cpp">
       <Filter>FacebookClient</Filter>
     </ClCompile>
   </ItemGroup>
@@ -31,10 +31,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WinRTHttpRequestManager.h">
       <Filter>HttpClient</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Facebook.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.h">
       <Filter>FacebookClient</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.h">
       <Filter>FacebookClient</Filter>
     </ClInclude>
   </ItemGroup>

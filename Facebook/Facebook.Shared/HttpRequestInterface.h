@@ -255,6 +255,8 @@ private:
 	}
 };
 
+using wNKUri = NKUri<std::wstring>;
+
 //! ----------------------------
 
 struct IHttpRequestManager

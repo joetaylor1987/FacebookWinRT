@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Facebook.h"
+#include "WinRTFacebookSession.h"
 #include "WinRTFacebookHelpers.h"
 
 using namespace concurrency;
@@ -13,103 +13,88 @@ using namespace FBHelpers;
 
 //! ----------------------------
 
-void CWinRTFacebookClient::initialise(const std::wstring& app_id, Windows::UI::Core::CoreDispatcher^ ui_thread_dispatcher)
+void CWinRTFacebookSession::initialise(Windows::UI::Core::CoreDispatcher^ ui_thread_dispatcher)
 {
 	// We must have a dispatcher for the UI thread
 	assert(ui_thread_dispatcher);
 
-	m_AppId = ref new String(app_id.c_str());
 	m_Dispatcher = ui_thread_dispatcher;
 }
 
 //! ----------------------------
 
-task<bool> CWinRTFacebookClient::login(const std::string& scopes, eLoginConfig config /*= eLoginConfig::ALLOW_UI*/)
+task<bool> CWinRTFacebookSession::open(
+	const std::wstring& app_id,
+	const std::wstring& scopes,
+	eLoginConfig config)
 {
 	return concurrency::create_task([=]()
 	{
-		if (m_bIsSingedIn)
-			return true;
-
-		bool session_is_valid = false;
-
-		// We've already got an access token
-		if (PersistentData::has_access_token())
-		{
-			// Check it's still valid by refreshing permissions
-			session_is_valid = get_permissions().get();
-		}
-
-		// If the above failed and we're allowing UI, proceed with full login,
-		// followed by another token refresh attempt
-		if (!session_is_valid && config == eLoginConfig::ALLOW_UI)
-		{
-			auto full_login_flow = concurrency::create_task(full_login(scopes))
-				.then([=](bool success)
-			{
-				if (success)
-					return get_permissions().get();
-
-				return false;
-			});
-
-			session_is_valid = full_login_flow.get();
-		}
-		
-		return session_is_valid;
+		return
+			isSessionActive()							// already signed in
+			||
+			(
+				PersistentData::has_access_token() &&	// have access token and
+				update_permissions().get()				// successfully updated permissions
+			)
+			||
+			(
+				config == eLoginConfig::ALLOW_UI &&		// can show UI
+				full_login(app_id, scopes).get() &&		// retrieved new access token
+				update_permissions().get()				// successfully updated permissions
+			);
 	})
 		.then([=](bool session_is_valid)
 	{
-		// If permission get failed. Logout
-		if (!session_is_valid)
-			logout();
+		if (!session_is_valid)							// If permission get failed. Logout
+			close(eLogoutConfig::CLEAR_STATE);
 
-		// Signed in if session is valid
-		m_bIsSingedIn = session_is_valid;
-
-		// Finally, return success or failure
-		return session_is_valid;
+		return m_SessionActive = session_is_valid;		// Finally, return success or failure
 	});
 }
 
 //! ----------------------------
 
-void CWinRTFacebookClient::logout(eLogoutConfig config /*= CLEAR_STATE*/)
+void CWinRTFacebookSession::close(eLogoutConfig config)
 {
-	m_bIsSingedIn = false;
+	m_SessionActive = false;
 
 	if (config == eLogoutConfig::CLEAR_STATE)
 	{
 		if (PersistentData::has_access_token())
 			PersistentData::del_access_token();
 
-		//! TODO: Clear permissions
+		m_Permissions.clear();
 	}
 }
 
 //! ----------------------------
 
-task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
+task<bool> CWinRTFacebookSession::full_login(
+	const std::wstring& app_id,
+	const std::wstring& scopes)
 {
 	assert(m_Dispatcher);
 
 	// Construct facebook oauth URI
-	NKUri<std::wstring> login_uri(L"https://www.facebook.com/dialog/oauth");
+	wNKUri login_uri(L"https://www.facebook.com/dialog/oauth");
 
-	login_uri.AppendQuery( L"client_id", m_AppId->Data() );
+	login_uri.AppendQuery( L"client_id", app_id );
 	login_uri.AppendQuery( L"redirect_uri", L"https://www.facebook.com/connect/login_success.html" );
-	login_uri.AppendQuery( L"scope", widen(scopes));
+	login_uri.AppendQuery( L"scope", scopes);
 	login_uri.AppendQuery( L"display", L"popup" );
 	login_uri.AppendQuery( L"response_type", L"token" );
 
 	String^ wStrUri = ref new String(login_uri.ToString().c_str());
+
+	task_completion_event<bool> tce_authentication;
 
 #if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
 	WebAuthenticationBroker::AuthenticateAndContinue(
 		ref new Uri(wStrUri),
 		WebAuthenticationBroker::GetCurrentApplicationCallbackUri());
 
-	//! TODO: Catch App's 'Continue' event, and set m_AuthenticateCompletion
+	//! TODO: Catch App's 'Continue' event, and set tce_authentication
 #else
 
 	concurrency::create_task(m_Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
@@ -156,24 +141,24 @@ task<bool> CWinRTFacebookClient::full_login(const std::string& scopes)
 				PersistentData::set_access_token(long_term_access_token);
 
 			// Set our completion handler adn we're done.
-			m_AuthenticateCompletion.set(long_term_access_token != nullptr);
+			tce_authentication.set(long_term_access_token != nullptr);
 		});
 	})));
 
 #endif
 
 	// Wait for completion handler to be set
-	return task<bool>(m_AuthenticateCompletion);
+	return task<bool>(tce_authentication);
 }
 
 //! ----------------------------
 
-task<bool> CWinRTFacebookClient::get_permissions()
+task<bool> CWinRTFacebookSession::update_permissions()
 {
-	//! TODO: Clear permissions first.
+	m_Permissions.clear();
 
-	return GraphRequestAsync(NKUri<std::wstring>(L"https://graph.facebook.com/me/permissions"))
-		.then([](GraphResponse^ response)
+	return GraphRequestAsync(wNKUri(L"https://graph.facebook.com/me/permissions"))
+		.then([=](GraphResponse^ response)
 	{
 		bool bSuccess = false;
 
@@ -191,10 +176,7 @@ task<bool> CWinRTFacebookClient::get_permissions()
 					String^ state = permission->GetNamedString("status");
 
 					if (String::CompareOrdinal(state, "granted") == 0)
-					{
-						//! TODO: Store permission: name
-						std::wstring wstr_name = name->Data();
-					}
+						m_Permissions.emplace(name->Data());
 				}
 
 				bSuccess = true;

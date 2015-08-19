@@ -27,7 +27,7 @@ namespace FBHelpers
 	};
 
 	concurrency::task<GraphResponse^> GraphRequestAsync(
-		const NKUri<std::wstring>& graph_api_uri, 
+		const wNKUri& graph_api_uri,
 		bool use_access_token = true);
 
 	namespace PersistentData

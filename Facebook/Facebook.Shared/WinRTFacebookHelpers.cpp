@@ -10,11 +10,11 @@ namespace FBHelpers
 {
 	std::shared_ptr<IHttpRequestManager> s_HttpRequestManager = nullptr;
 
-	task<GraphResponse^> GraphRequestAsync(const NKUri<std::wstring>& graph_api_uri, bool use_access_token /*= true*/)
+	task<GraphResponse^> GraphRequestAsync(const wNKUri& graph_api_uri, bool use_access_token /*= true*/)
 	{
 		assert(s_HttpRequestManager && "s_HttpRequestManager must be initialised");
 
-		NKUri<std::wstring> uri_copy = graph_api_uri;
+		wNKUri uri_copy = graph_api_uri;
 
 		if (use_access_token)
 			uri_copy.AppendQuery(L"access_token", std::wstring(PersistentData::get_access_token()->Data()));
@@ -56,7 +56,7 @@ namespace FBHelpers
 							if (paging_ojbect->HasKey("next"))
 							{
 								GraphResponse^ paged_response = GraphRequestAsync
-									(NKUri<std::wstring>(paging_ojbect->GetNamedString(L"next")->Data()), false)
+									(wNKUri(paging_ojbect->GetNamedString(L"next")->Data()), false)
 									.get();
 
 								if (paged_response->error)

@@ -6,7 +6,7 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
-#include "Facebook.h"
+#include "WinRTFacebookSession.h"
 #include "WinRTFacebookHelpers.h"
 
 using namespace Facebook;
@@ -23,25 +23,22 @@ using namespace Windows::UI::Xaml::Input;
 using namespace Windows::UI::Xaml::Media;
 using namespace Windows::UI::Xaml::Navigation;
 
-// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
-
 MainPage::MainPage()
 {
 	InitializeComponent();
 
 	FBHelpers::s_HttpRequestManager = std::shared_ptr<IHttpRequestManager>(CreateHttpRequestManager());
 
-	CWinRTFacebookClient::instance().initialise(
-		L"710421129063177",
+	CWinRTFacebookSession::Initialise(
 		Windows::UI::Core::CoreWindow::GetForCurrentThread()->Dispatcher);
 }
 
 
 void Facebook::MainPage::FBLogout_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-	CWinRTFacebookClient::instance().logout();
+	CWinRTFacebookSession::Close();
 
-	this->Output->Text += "Logged Out\n";
+	this->Output->Text += "Session Closed\n";
 }
 
 
@@ -49,18 +46,18 @@ void Facebook::MainPage::FBLogin_Click(Platform::Object^ sender, Windows::UI::Xa
 {
 	this->ProgressBar->Visibility = ::Visibility::Visible;
 
-	CWinRTFacebookClient::instance().login("email,user_likes")
-		.then([=](bool logged_in)
+	CWinRTFacebookSession::Open(L"710421129063177", L"email,user_likes")
+		.then([=](bool session_open)
 	{
 		this->ProgressBar->Visibility = ::Visibility::Collapsed;
 
-		if (logged_in)
+		if (session_open)
 		{
-			this->Output->Text += "Login Successful!\n";
+			this->Output->Text += "Session Opened\n";
 		}
 		else
 		{
-			this->Output->Text += "Login Failed!\n";
+			this->Output->Text += "Session Not Opened\n";
 		}
 	}, task_continuation_context::use_current());
 }
