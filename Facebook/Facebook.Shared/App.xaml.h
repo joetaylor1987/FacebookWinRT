@@ -17,6 +17,7 @@ namespace Facebook
 	public:
 		App();
 
+		virtual void OnActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs^ args) override;
 		virtual void OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ e) override;
 
 	private:

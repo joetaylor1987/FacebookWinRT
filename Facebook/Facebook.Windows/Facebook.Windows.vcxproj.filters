@@ -7,9 +7,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="MainPage.xaml" />
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="MainPage.xaml.cpp" />
   </ItemGroup>
   <ItemGroup>

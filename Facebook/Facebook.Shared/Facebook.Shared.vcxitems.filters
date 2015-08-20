@@ -17,6 +17,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.cpp">
       <Filter>FacebookClient</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainPage.xaml.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml" />
@@ -37,6 +38,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.h">
       <Filter>FacebookClient</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainPage.xaml.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="HttpClient">
@@ -45,5 +47,8 @@
     <Filter Include="FacebookClient">
       <UniqueIdentifier>{5f47b8c9-c577-4e39-9ac9-ef18f302d633}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)MainPage.xaml" />
   </ItemGroup>
 </Project>

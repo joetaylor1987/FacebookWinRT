@@ -19,6 +19,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)App.xaml.cpp">
       <DependentUpon>$(MSBuildThisFileDirectory)App.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)MainPage.xaml.cpp">
+      <DependentUpon>$(MSBuildThisFileDirectory)MainPage.xaml</DependentUpon>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HttpRequestInterface.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)WinRTFacebookHelpers.cpp" />
@@ -29,6 +32,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClInclude Include="$(MSBuildThisFileDirectory)MainPage.xaml.h">
+      <DependentUpon>$(MSBuildThisFileDirectory)MainPage.xaml</DependentUpon>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)WinRTFacebookSession.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpRequestInterface.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HttpTypes.h" />
@@ -38,5 +44,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)MainPage.xaml" />
   </ItemGroup>
 </Project>

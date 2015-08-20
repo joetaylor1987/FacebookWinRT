@@ -38,6 +38,11 @@ public:
 		shared_instance().initialise(ui_thread_dispatcher);
 	}
 
+	static void OnAppActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs^ args)
+	{
+		shared_instance().on_app_activated(args);
+	}
+
 	static concurrency::task<bool> Open(
 		const std::wstring& app_id,
 		const std::wstring& scopes,
@@ -80,6 +85,11 @@ private:
 			const std::wstring& app_id,
 			const std::wstring& scopes);
 
+	void on_app_activated(Windows::ApplicationModel::Activation::IActivatedEventArgs^ args);
+
+	void parse_auth_result(
+		Windows::Security::Authentication::Web::WebAuthenticationResult^ result);
+
 	concurrency::task<bool>	update_permissions();
 
 	inline const bool hasPermission(const std::wstring& permission) const
@@ -89,11 +99,10 @@ private:
 
 private:
 
-	Windows::UI::Core::CoreDispatcher^
-		m_Dispatcher = nullptr;
-
+	Windows::UI::Core::CoreDispatcher^	m_Dispatcher = nullptr;
+	concurrency::task_completion_event<bool> m_Authentication_tce;
+	bool m_bExpectingContinuation = false;
 	bool m_SessionActive = false;
-
 	tPermissionsList m_Permissions;
 };
 

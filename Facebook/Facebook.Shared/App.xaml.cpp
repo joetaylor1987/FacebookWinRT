@@ -6,6 +6,8 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 
+#include "WinRTFacebookSession.h"
+
 using namespace Facebook;
 
 using namespace Platform;
@@ -33,6 +35,11 @@ App::App()
 {
 	InitializeComponent();
 	Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+}
+
+void App::OnActivated(IActivatedEventArgs^ args)
+{
+	CWinRTFacebookSession::OnAppActivated(args);
 }
 
 /// <summary>

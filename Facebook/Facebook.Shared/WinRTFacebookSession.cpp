@@ -6,6 +6,7 @@
 using namespace concurrency;
 using namespace Platform;
 using namespace Windows::Foundation;
+using namespace Windows::ApplicationModel::Activation;
 using namespace Windows::Security::Authentication::Web;
 using namespace Windows::Data::Json;
 using namespace Windows::UI::Core;
@@ -85,70 +86,97 @@ task<bool> CWinRTFacebookSession::full_login(
 	login_uri.AppendQuery( L"display", L"popup" );
 	login_uri.AppendQuery( L"response_type", L"token" );
 
-	String^ wStrUri = ref new String(login_uri.ToString().c_str());
+	auto startUrl = ref new Uri(ref new String(login_uri.ToString().c_str()));
+	auto endUrl = ref new Uri("https://www.facebook.com/connect/login_success.html");
 
-	task_completion_event<bool> tce_authentication;
-
-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
-	WebAuthenticationBroker::AuthenticateAndContinue(
-		ref new Uri(wStrUri),
-		WebAuthenticationBroker::GetCurrentApplicationCallbackUri());
-
-	//! TODO: Catch App's 'Continue' event, and set tce_authentication
-#else
+	// reset completion handler
+	m_Authentication_tce = task_completion_event<bool>();
 
 	concurrency::create_task(m_Dispatcher->RunAsync(CoreDispatcherPriority::Normal,
 		ref new DispatchedHandler([=]()
 	{
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+		WebAuthenticationBroker::AuthenticateAndContinue(
+			startUrl,
+			endUrl,
+			nullptr,
+			WebAuthenticationOptions::None);
+
+		m_bExpectingContinuation = true;
+#else
 		concurrency::create_task(WebAuthenticationBroker::AuthenticateAsync(
-		WebAuthenticationOptions::None,
-		ref new Uri(wStrUri),
-		ref new Uri("https://www.facebook.com/connect/login_success.html")))
+			WebAuthenticationOptions::None,
+			startUrl,
+			endUrl))
 			.then([=](WebAuthenticationResult^ result)
 		{
-			String^ short_term_access_token = nullptr;
-
-			if (result->ResponseStatus == WebAuthenticationStatus::Success)
-			{
-				// Parse response for the access token
-				std::wstring wstr_response(result->ResponseData->Data());
-				std::wstring find_str = L"access_token=";
-				auto start = wstr_response.find(find_str);
-				if (start != std::wstring::npos)
-				{
-					std::wstring wstr_access_token = wstr_response.substr(start += find_str.size(), wstr_response.find('&') - start);
-					short_term_access_token = ref new String(wstr_access_token.c_str());
-				}
-			}
-			else
-			{
-				// something went wrong.
-//				unsigned int responseCode = result->ResponseErrorDetail;
-			}
-
-			// Return access token (can be null if auth failed)
-			return short_term_access_token;
-		})
-			.then([](String^ short_term_access_token)
-		{
-			//! TODO: Replace me with request for long-term access token
-			return concurrency::create_task([=]() { return short_term_access_token; });
-		})
-			.then([=](String^ long_term_access_token)
-		{
-			// If we have a long-term access token, store it.
-			if (long_term_access_token)
-				PersistentData::set_access_token(long_term_access_token);
-
-			// Set our completion handler adn we're done.
-			tce_authentication.set(long_term_access_token != nullptr);
+			parse_auth_result(result);
 		});
+#endif
 	})));
 
-#endif
-
 	// Wait for completion handler to be set
-	return task<bool>(tce_authentication);
+	return task<bool>(m_Authentication_tce);
+}
+
+//! ----------------------------
+
+void CWinRTFacebookSession::on_app_activated(IActivatedEventArgs^ args)
+{
+#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+	if (m_bExpectingContinuation && args->Kind == ActivationKind::WebAuthenticationBrokerContinuation)
+	{
+		m_bExpectingContinuation = false;
+
+		if (auto continuationEventArgs = safe_cast<WebAuthenticationBrokerContinuationEventArgs^>(args))
+			parse_auth_result(continuationEventArgs->WebAuthenticationResult);
+	}
+#endif
+}
+
+//! ----------------------------
+
+void CWinRTFacebookSession::parse_auth_result(WebAuthenticationResult^ result)
+{
+	create_task([=]()
+	{
+		String^ short_term_access_token = nullptr;
+
+		if (result->ResponseStatus == WebAuthenticationStatus::Success)
+		{
+			// Parse response for the access token
+			std::wstring wstr_response(result->ResponseData->Data());
+			std::wstring find_str = L"access_token=";
+			auto start = wstr_response.find(find_str);
+			if (start != std::wstring::npos)
+			{
+				std::wstring wstr_access_token = wstr_response.substr(start += find_str.size(), wstr_response.find('&') - start);
+				short_term_access_token = ref new String(wstr_access_token.c_str());
+			}
+		}
+		else
+		{
+			// something went wrong.
+			//				unsigned int responseCode = result->ResponseErrorDetail;
+		}
+
+		// Return access token (can be null if auth failed)
+		return short_term_access_token;
+	})
+	.then([](String^ short_term_access_token)
+	{
+		//! TODO: Replace me with request for long-term access token
+		return concurrency::create_task([=]() { return short_term_access_token; });
+	})
+	.then([=](String^ long_term_access_token)
+	{
+		// If we have a long-term access token, store it.
+		if (long_term_access_token)
+			PersistentData::set_access_token(long_term_access_token);
+
+		// Set our completion handler adn we're done.
+		m_Authentication_tce.set(long_term_access_token != nullptr);
+	});
 }
 
 //! ----------------------------
